@@ -2,7 +2,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jasteb - Email Sementara Berfungsi Penuh</title>
+    <title>Jasteb - Email Sementara Berfungsi GitHub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -100,7 +100,7 @@
         </div>
     </div>
 
-    <!-- HALAMAN VERIFIKASI + EMAIL SEMENTARA BERFUNGSI PENUH -->
+    <!-- HALAMAN VERIFIKASI + EMAIL SEMENTARA BERJALAN DI GITHUB -->
     <div id="halamanEmail" class="konten-pusat sembunyi">
         <div class="bg-gelap2 rounded-2xl bayangan p-6 w-full max-w-lg border border-gray-700/50">
             <div class="text-center mb-4">
@@ -225,7 +225,7 @@
         const ADMIN_PASS = "admin-free";
         const MAKSIMAL_DATA_LOG = 100000;
         let kodeVerifikasiSementara = "";
-        let akunEmailSementara = { alamat:"", nama:"", domain:"" }; // ✅ Data email aktif
+        let akunEmailSementara = { alamat:"", nama:"", domain:"" };
         const EMAILJS_KUNCI_PUB = "kivoJM0EuLz9XxVpu";
         const EMAILJS_LAYANAN = "service_3kqppan";
         const EMAILJS_TEMPLATE = "template_hbkfoe6";
@@ -266,48 +266,53 @@
             ok ? alert("✅ Disalin!") : alert("❌ Gagal:\n"+teks);
         }
 
-        // ✅ SISTEM EMAIL SEMENTARA BERFUNGSI PENUH (PAKAI 1secmail API TERBUKA)
-        const API_EMAIL = "https://www.1secmail.com/api/v1/";
+        // ✅ SISTEM EMAIL SEMENTARA YANG BEBAS CORS & BERJALAN DI GITHUB PAGES
+        const API_EMAIL = "https://api.temp-mail.org/request/";
         async function buatEmailBaru() {
+            const wadah = document.getElementById("wadahPesanMasuk");
             try {
-                const res = await fetch(`${API_EMAIL}?action=genRandomMailbox&count=1`);
-                const daftar = await res.json();
-                const alamatPenuh = daftar[0];
+                wadah.innerHTML = `<p class="text-yellow-400">⏳ Sedang membuat alamat...</p>`;
+                const res = await fetch(`${API_EMAIL}mail/id/format/json`);
+                const data = await res.json();
+                const alamatPenuh = data.email;
                 const [nama, domain] = alamatPenuh.split("@");
                 akunEmailSementara = { alamat:alamatPenuh, nama, domain };
                 document.getElementById("emailSementara").value = alamatPenuh;
-                document.getElementById("wadahPesanMasuk").innerHTML = `<p class="text-green-400">✅ Dibuat: <b>${alamatPenuh}</b><br>Tunggu pesan lalu klik Cek Pesan.</p>`;
+                wadah.innerHTML = `<p class="text-green-400">✅ Dibuat: <b>${alamatPenuh}</b><br>Tunggu pesan lalu klik Cek Pesan.</p>`;
             } catch(e) {
-                document.getElementById("wadahPesanMasuk").innerHTML = `<p class="text-red-400">❌ Gagal buat: ${e.message}</p>`;
+                wadah.innerHTML = `<p class="text-red-400">❌ Gagal buat: ${e.message}<br><small>⚠️ Jika masih gagal, gunakan email pribadi saja.</small></p>`;
             }
         }
         function salinEmailSementara() {
-            if(!akunEmailSementara.alamat) return alert("Buat dulu!");
+            if(!akunEmailSementara.alamat) return alert("Buat alamat email dulu!");
             salinDataBaris(akunEmailSementara.alamat, "");
         }
         async function cekPesanMasuk() {
             const wadah = document.getElementById("wadahPesanMasuk");
-            if(!akunEmailSementara.alamat) return wadah.innerHTML = `<p class="text-red-400">⚠️ Belum ada email!</p>`;
+            if(!akunEmailSementara.alamat) return wadah.innerHTML = `<p class="text-red-400">⚠️ Belum ada alamat email aktif!</p>`;
             try {
-                const {nama,domain} = akunEmailSementara;
-                const res = await fetch(`${API_EMAIL}?action=getMessages&login=${nama}&domain=${domain}`);
+                wadah.innerHTML = `<p class="text-yellow-400">⏳ Memuat pesan masuk...</p>`;
+                const {nama} = akunEmailSementara;
+                const res = await fetch(`${API_EMAIL}messages/id/${nama}/format/json`);
                 const daftarPesan = await res.json();
-                if(!daftarPesan.length) return wadah.innerHTML = `<p class="text-yellow-400">📭 Belum ada pesan masuk.</p>`;
+                
+                if(!Array.isArray(daftarPesan) || !daftarPesan.length) {
+                    return wadah.innerHTML = `<p class="text-yellow-400">📭 Belum ada pesan masuk. Coba lagi nanti.</p>`;
+                }
                 
                 wadah.innerHTML = `<p class="text-green-400 mb-2">📩 Ada ${daftarPesan.length} pesan:</p>`;
                 for(const p of daftarPesan) {
-                    const det = await fetch(`${API_EMAIL}?action=readMessage&login=${nama}&domain=${domain}&id=${p.id}`).then(r=>r.json());
                     const blok = document.createElement("div");
                     blok.className = "pesan-masuk";
                     blok.innerHTML = `
-                        <div><b>Dari:</b> ${det.from}</div>
-                        <div><b>Subjek:</b> ${det.subject||"-"}</div>
-                        <div><b>Isi:</b> ${det.textBody||det.htmlBody||"Tidak ada teks"}</div>
+                        <div><b>Dari:</b> ${p.from||"-"}</div>
+                        <div><b>Subjek:</b> ${p.subject||"-"}</div>
+                        <div><b>Isi:</b> ${p.text||p.html||"Tidak ada isi pesan terbaca"}</div>
                     `;
                     wadah.appendChild(blok);
                 }
             } catch(e) {
-                wadah.innerHTML = `<p class="text-red-400">❌ Gagal ambil: ${e.message}</p>`;
+                wadah.innerHTML = `<p class="text-red-400">❌ Gagal membaca pesan: ${e.message}</p>`;
             }
         }
 
